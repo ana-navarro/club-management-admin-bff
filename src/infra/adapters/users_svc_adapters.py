@@ -7,6 +7,9 @@ from src.domain.ports.auth_ports import JsonObject, UpstreamError
 
 ClientProvider = Callable[[], httpx.Client]
 
+# Tells the users service which system is calling, so a client token is refused here.
+APP_TYPE = "ADMIN"
+
 
 def _send(
     provider: ClientProvider,
@@ -15,7 +18,9 @@ def _send(
     json: JsonObject | None = None,
     authorization: str | None = None,
 ) -> httpx.Response:
-    headers = {"Authorization": authorization} if authorization else {}
+    headers = {"X-App-Type": APP_TYPE}
+    if authorization:
+        headers["Authorization"] = authorization
     try:
         response = provider().request(method, path, json=json, headers=headers)
     except httpx.HTTPError as error:

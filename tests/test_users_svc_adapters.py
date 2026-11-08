@@ -98,3 +98,19 @@ def test_reports_an_unavailable_service() -> None:
         LoginAdapter(provider_for(handler))({})
 
     assert (error.value.status_code, error.value.code) == (503, "service_unavailable")
+
+
+def test_every_call_says_it_comes_from_the_admin_system() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={})
+
+    provider = provider_for(handler)
+    LoginAdapter(provider)({"email": "a@b.c"})
+    RefreshTokenAdapter(provider)("Bearer jwt")
+    GetCurrentUserAdapter(provider)("Bearer jwt")
+    UpdatePreferencesAdapter(provider)("Bearer jwt", {"theme": "dark"})
+
+    assert [request.headers["x-app-type"] for request in seen] == ["ADMIN"] * 4
